@@ -1,3 +1,9 @@
+extern crate gio;
+extern crate gtk;
+
+use std::env;
+
+use gio::{ApplicationExt, ApplicationExtManual, ApplicationFlags};
 use gtk::{
     Adjustment,
     Image,
@@ -5,13 +11,6 @@ use gtk::{
     Scale,
     ScaleExt,
 };
-use gtk::Orientation::{Horizontal, Vertical};
-extern crate gio;
-extern crate gtk;
-
-use std::env;
-
-use gio::{ApplicationExt, ApplicationExtManual, ApplicationFlags};
 use gtk::{Application, ApplicationWindow, GtkWindowExt, WidgetExt};
 use gtk::{
     ContainerExt,
@@ -19,8 +18,10 @@ use gtk::{
     Toolbar,
     ToolButton,
 };
+use gtk::Orientation::{Horizontal, Vertical};
 
 use crate::toolbar::MusicToolbar;
+
 
 mod toolbar;
 
@@ -66,9 +67,7 @@ impl App {
         //app.connect_toolbar_events();
 
         app
-
     }
-
 }
 
 fn main() {
@@ -77,7 +76,7 @@ fn main() {
         ApplicationFlags::empty())
         .expect("Application initialization failed");
 
-    application.connect_startup( |application| {
+    application.connect_startup(|application| {
         App::new(application.clone());
     });
     application.connect_activate(|_| {});
