@@ -1,3 +1,11 @@
+use gtk::{
+    Adjustment,
+    Image,
+    ImageExt,
+    Scale,
+    ScaleExt,
+};
+use gtk::Orientation::{Horizontal, Vertical};
 extern crate gio;
 extern crate gtk;
 
@@ -26,8 +34,21 @@ impl App {
         let window = ApplicationWindow::new(&application);
         window.set_title("Rusic");
 
+        let vbox = gtk::Box::new(Vertical, 0);
+        window.add(&vbox);
+
         let toolbar = MusicToolbar::new();
-        window.add(toolbar.toolbar());
+        vbox.add(toolbar.toolbar());
+
+        let cover = Image::new();
+        cover.set_from_file("cover.jpg");
+        vbox.add(&cover);
+
+        let adjustment = Adjustment::new(0.0, 0.0, 10.0, 0.0, 0.0, 0.0);
+        let scale = Scale::new(Horizontal, &adjustment);
+        scale.set_draw_value(false);
+        vbox.add(&scale);
+
         window.show_all();
 
         let app = App {
@@ -36,6 +57,7 @@ impl App {
         };
 
         app.connect_events();
+        //app.connect_toolbar_events();
 
         app
 
