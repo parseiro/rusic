@@ -25,8 +25,11 @@ use crate::toolbar::MusicToolbar;
 mod toolbar;
 
 struct App {
+    adjustment: Adjustment,
+    cover: Image,
     toolbar: MusicToolbar,
     window: ApplicationWindow,
+    application: Application,
 }
 
 impl App {
@@ -52,8 +55,11 @@ impl App {
         window.show_all();
 
         let app = App {
+            adjustment,
+            cover,
             toolbar,
             window,
+            application,
         };
 
         app.connect_events();
@@ -71,8 +77,11 @@ fn main() {
         ApplicationFlags::empty())
         .expect("Application initialization failed");
 
-    application.connect_startup(|application| {});
-
+    application.connect_startup( |application| {
+        App::new(application.clone());
+    });
     application.connect_activate(|_| {});
+
+
     application.run(&env::args().collect::<Vec<_>>());
 }
