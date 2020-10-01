@@ -7,9 +7,19 @@ use std::thread;
 use crossbeam::sync::SegQueue;
 use pulse_simple::Playback;
 
-// use mp3::Mp3Decoder;
-// use self::Action::*;
+use mp3::Mp3Decoder;
+use self::Action::*;
 
 const BUFFER_SIZE: usize = 1000;
 const DEFAULT_RATE: u32 = 44100;
 
+enum Action{
+    Load(PathBuf),
+    Stop,
+}
+
+#[derive(Clone)]
+struct EventLoop {
+    queue: Arc<SegQueue<Action>>,
+    playing: Arc<Mutex<bool>>,
+}

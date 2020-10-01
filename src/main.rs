@@ -58,7 +58,7 @@ use std::io::{SeekFrom, Read, Seek};
 mod playlist;
 mod toolbar;
 mod mp3;
-
+mod player;
 
 struct App {
     adjustment: Adjustment,
