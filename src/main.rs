@@ -54,6 +54,7 @@ use crate::playlist::Playlist;
 use crate::toolbar::MusicToolbar;
 use std::time::Duration;
 use std::io::{SeekFrom, Read, Seek};
+use std::sync::{Mutex, Arc};
 
 mod playlist;
 mod toolbar;
@@ -67,6 +68,11 @@ struct App {
     window: ApplicationWindow,
     application: Application,
     playlist: Rc<Playlist>,
+    state: Arc<Mutex<State>>
+}
+
+struct State {
+    stopped: bool,
 }
 
 impl App {
@@ -84,14 +90,15 @@ impl App {
         // cover.set_from_file("cover.jpg");
         vbox.add(&cover);
 
-        let playlist = Rc::new(Playlist::new());
+        let state = Arc::new(Mutex::new(State { stopped: true }));
+
+        let playlist = Rc::new(Playlist::new(state.clone()));
         vbox.add(playlist.view());
 
         let adjustment = Adjustment::new(0.0, 0.0, 10.0, 0.0, 0.0, 0.0);
         let scale = Scale::new(Horizontal, &adjustment);
         scale.set_draw_value(false);
         vbox.add(&scale);
-
 
         window.show_all();
 
@@ -102,6 +109,7 @@ impl App {
             toolbar,
             window,
             application,
+            state,
         };
 
         app.connect_events();

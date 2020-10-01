@@ -1,8 +1,12 @@
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 use gdk_pixbuf::{InterpType, Pixbuf, PixbufLoader};
-use gtk::{CellLayoutExt, CellRendererPixbuf, CellRendererText, ListStore, ListStoreExt, ListStoreExtManual, StaticType, ToValue, TreeIter, TreeModelExt, TreeSelectionExt, TreeView, TreeViewColumn, TreeViewColumnExt, TreeViewExt, Type, WidgetExt, ApplicationWindow, FileFilterExt, FileChooserExt, DialogExt};
+use gtk::{ApplicationWindow, CellLayoutExt, CellRendererPixbuf, CellRendererText, DialogExt, FileChooserExt, FileFilterExt, ListStore, ListStoreExt, ListStoreExtManual, StaticType, ToValue, TreeIter, TreeModelExt, TreeSelectionExt, TreeView, TreeViewColumn, TreeViewColumnExt, TreeViewExt, Type, WidgetExt};
 use id3::Tag;
+
+use crate::player::Player;
+use crate::State;
 
 use self::Visibility::*;
 
@@ -23,6 +27,7 @@ const INTERP_HYPER: InterpType = 3;
 
 pub struct Playlist {
     model: ListStore,
+    player: Player,
     treeview: TreeView,
 }
 
@@ -33,7 +38,7 @@ enum Visibility {
 }
 
 impl Playlist {
-    pub fn new() -> Self {
+    pub(crate) fn new(state: Arc<Mutex<State>>) -> Self {
         let model = ListStore::new(&[
             Pixbuf::static_type(),
             Type::String,
@@ -53,6 +58,7 @@ impl Playlist {
 
         Playlist {
             model,
+            player: Player::new(state.clone()),
             treeview,
         }
     }
