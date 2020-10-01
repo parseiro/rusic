@@ -26,6 +26,9 @@ extern crate gio;
 extern crate gtk;
 extern crate gtk_sys;
 extern crate id3;
+extern crate crossbeam;
+extern crate pulse_simple;
+extern crate simplemad;
 
 use std::env;
 use std::rc::Rc;
@@ -49,9 +52,13 @@ use gtk::Orientation::{Horizontal, Vertical};
 
 use crate::playlist::Playlist;
 use crate::toolbar::MusicToolbar;
+use std::time::Duration;
+use std::io::{SeekFrom, Read, Seek};
 
 mod playlist;
 mod toolbar;
+mod mp3;
+
 
 struct App {
     adjustment: Adjustment,
@@ -118,3 +125,8 @@ fn main() {
 
     let _ = application.run(&env::args().collect::<Vec<_>>());
 }
+
+fn to_millis(duration: Duration) -> u64 {
+    duration.as_secs() * 1000 + duration.subsec_nanos() as u64 / 1_000_000
+}
+
