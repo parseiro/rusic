@@ -90,3 +90,16 @@ impl Player {
         }
     }
 }
+
+fn iter_to_buffer<I: Iterator<Item=i16>>(iter: &mut I, buffer: &mut [[i16; 2]; BUFFER_SIZE]) -> usize {
+    let mut iter = iter.take(BUFFER_SIZE);
+    let mut index = 0;
+    while let Some(sample1) = iter.next() {
+        if let Some(sample2) = iter.next() {
+            buffer[index][0] = sample1;
+            buffer[index][1] = sample2;
+        }
+        index += 1;
+    }
+    index
+}

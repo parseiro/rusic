@@ -55,6 +55,7 @@ use crate::toolbar::MusicToolbar;
 use std::time::Duration;
 use std::io::{SeekFrom, Read, Seek};
 use std::sync::{Mutex, Arc};
+use std::num::ParseIntError;
 
 mod playlist;
 mod toolbar;
@@ -113,9 +114,30 @@ impl App {
         };
 
         app.connect_events();
-        //app.connect_toolbar_events();
+        app.connect_toolbar_events();
 
         app
+    }
+
+    fn connect_toolbar_events(&self) {
+        //
+
+        let playlist = self.playlist.clone();
+        let play_image = self.toolbar.play_image.clone();
+        let cover = self.cover.clone();
+        let state = self.state.clone();
+        self.toolbar.play_button.connect_clicked(move |_| {
+            if state.lock().unwrap().stopped {
+                if playlist.play() {
+                    set_image_icon(&play_image, PAUSE_ICON);
+                    set_cover(&cover, &playlist);
+                }
+            } else {
+                set_image_icon(&play_image, PLAY_ICON);
+            }
+        });
+
+        //
     }
 }
 
