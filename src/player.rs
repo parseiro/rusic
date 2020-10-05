@@ -9,6 +9,8 @@ use pulse_simple::Playback;
 
 use crate::mp3::Mp3Decoder;
 use self::Action::*;
+use std::cell::Cell;
+use std::time::Duration;
 
 const BUFFER_SIZE: usize = 1000;
 const DEFAULT_RATE: u32 = 44100;
@@ -36,6 +38,7 @@ impl EventLoop {
 pub struct Player {
     app_state: Arc<Mutex<super::State>>,
     event_loop: EventLoop,
+    paused: Cell<bool>,
 }
 
 impl Player {
@@ -62,7 +65,9 @@ impl Player {
                                                          None, rate);
                                 app_state.lock().unwrap().stopped = false;
                             },
-                            Stop => {},
+                            Stop => {
+                                source = None;
+                            },
                         }
                     } else if *event_loop.playing.lock().unwrap() {
                         let mut written = false;
@@ -87,7 +92,61 @@ impl Player {
         Player {
             app_state,
             event_loop,
+            paused: Cell::new(false),
         }
+    }
+
+    pub fn is_paused(&self) -> bool {
+        return self.paused.get()
+    }
+
+    pub fn pause(&self) {
+        self.paused.set(true);
+        self.app_state.lock().unwrap().stopped = true;
+        self.set_playing(false);
+    }
+
+    pub fn resume(&self) {
+        self.paused.set(false);
+        self.app_state.lock().unwrap().stopped = false;
+        self.set_playing(true);
+    }
+
+    fn set_playing(&self, playing: bool) {
+        *self.event_loop.playing.lock()
+            .unwrap() = playing;
+        let (ref lock, ref condition_variable) = *self.event_loop.condition_variable;
+        let mut started = lock.lock().unwrap();
+        *started = playing;
+        if playing {
+            condition_variable.notify_one();
+        }
+    }
+
+    pub fn stop(&self) {
+        self.paused.set(false);
+        self.app_state.lock().unwrap().stopped = true;
+        self.emit(Stop);
+        self.set_playing(false);
+    }
+
+    pub fn load(&self, path: &Path) {
+        let mut reader = m3u::Reader::open(path).unwrap();
+        for entry in reader.entries() {
+            if let Ok(m3u::Entry::Path(path)) = entry {
+                self.add(&path);
+            }
+        }
+    }
+
+    fn emit(&self, action: Action) {
+        self.event_loop.queue.push(action);
+    }
+
+    pub fn compute_duration<P: AsRef<Path>>(path: P) ->
+    Option<Duration> {
+        let file = File::open(path).unwrap();
+        Mp3Decoder::compute_duration(BufReader::new(file))
     }
 }
 

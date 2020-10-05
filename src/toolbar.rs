@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use gtk::{ApplicationWindow, ContainerExt, DialogExt, FileChooserExt, FileFilterExt, Image, ImageExt, SeparatorToolItem, Toolbar, ToolButton, ToolButtonExt, WidgetExt};
+use gtk::{ApplicationWindow, ContainerExt, DialogExt, FileChooserExt, FileFilterExt, Image, ImageExt, SeparatorToolItem, Toolbar, ToolButton, ToolButtonExt, WidgetExt, Continue, AdjustmentExt};
 use gtk::{FileChooserAction, FileChooserDialog, FileFilter};
 use gtk_sys::{GTK_RESPONSE_ACCEPT, GTK_RESPONSE_CANCEL};
 
@@ -69,6 +69,30 @@ impl MusicToolbar {
 
 impl App {
     pub fn connect_events(&self) {
+        let playlist = self.playlist.clone();
+        let adjustment = self.adjustment.clone();
+        let state = self.state.clone();
+        // let play_image = self.toolbar.play_image.clone();
+
+        gtk::timeout_add(100, move || {
+            let state = state.lock().unwrap();
+            if let Some(path) = playlist.path() {
+                if let Some(&duration) = state.durations.get(&path)
+                {
+                    adjustment.set_upper(duration as f64);
+                }
+            }
+            if state.stopped {
+                // set_image_icon(&play_image, PLAY_ICON);
+            } else {
+                // set_image_icon(&play_image, PAUSE_ICON);
+            }
+            adjustment.set_value(state.current_time as f64);
+            Continue(true)
+        });
+    }
+
+    pub(crate) fn connect_toolbar_events(&self) {
         let window = self.window.clone();
 
         let _ = self.toolbar.quit_button.connect_clicked(move |_| {
@@ -99,6 +123,51 @@ impl App {
         let playlist = self.playlist.clone();
         let _ = self.toolbar.remove_button.connect_clicked(move |_| {
             playlist.remove_selection();
+        });
+
+        let playlist = self.playlist.clone();
+        // let play_image = self.toolbar.play_image.clone();
+        let cover = self.cover.clone();
+        let state = self.state.clone();
+        self.toolbar.play_button.connect_clicked(move |_| {
+            if state.lock().unwrap().stopped {
+                if playlist.play() {
+                    // set_image_icon(&play_image, PAUSE_ICON);
+                    set_cover(&cover, &playlist);
+                }
+            } else {
+                playlist.pause();
+                // set_image_icon(&play_image, PLAY_ICON);
+            }
+        });
+
+        let playlist = self.playlist.clone();
+        // let play_image = self.toolbar.play_image.clone();
+        let cover = self.cover.clone();
+        self.toolbar.stop_button.connect_clicked(move |_| {
+            playlist.stop();
+            cover.hide();
+            // set_image_icon(&play_image, PLAY_ICON);
+        });
+
+        let playlist = self.playlist.clone();
+        // let play_image = self.toolbar.play_image.clone();
+        let cover = self.cover.clone();
+        self.toolbar.next_button.connect_clicked(move |_| {
+            if playlist.next() {
+                // set_image_icon(&play_image, PAUSE_ICON);
+                set_cover(&cover, &playlist);
+            }
+        });
+
+        let playlist = self.playlist.clone();
+        // let play_image = self.toolbar.play_image.clone();
+        let cover = self.cover.clone();
+        self.toolbar.previous_button.connect_clicked(move |_| {
+            if playlist.previous() {
+                // set_image_icon(&play_image, PAUSE_ICON);
+                set_cover(&cover, &playlist);
+            }
         });
     }
 }

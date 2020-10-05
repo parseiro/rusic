@@ -34,13 +34,7 @@ use std::env;
 use std::rc::Rc;
 
 use gio::{ApplicationExt, ApplicationExtManual, ApplicationFlags};
-use gtk::{
-    Adjustment,
-    Image,
-    ImageExt,
-    Scale,
-    ScaleExt,
-};
+use gtk::{Adjustment, Image, ImageExt, Scale, ScaleExt, ToolButtonExt};
 use gtk::{Application, ApplicationWindow, GtkWindowExt, WidgetExt};
 use gtk::{
     ContainerExt,
@@ -56,6 +50,7 @@ use std::time::Duration;
 use std::io::{SeekFrom, Read, Seek};
 use std::sync::{Mutex, Arc};
 use std::num::ParseIntError;
+use std::collections::HashMap;
 
 mod playlist;
 mod toolbar;
@@ -73,6 +68,8 @@ struct App {
 }
 
 struct State {
+    current_time: u64,
+    durations: HashMap<String, u64>,
     stopped: bool,
 }
 
@@ -91,7 +88,13 @@ impl App {
         // cover.set_from_file("cover.jpg");
         vbox.add(&cover);
 
-        let state = Arc::new(Mutex::new(State { stopped: true }));
+        let current_time = 0;
+        let durations = HashMap::new();
+        let state = Arc::new(Mutex::new(State {
+            current_time,
+            durations,
+            stopped: true,
+        }));
 
         let playlist = Rc::new(Playlist::new(state.clone()));
         vbox.add(playlist.view());
@@ -119,26 +122,7 @@ impl App {
         app
     }
 
-    fn connect_toolbar_events(&self) {
-        //
 
-        let playlist = self.playlist.clone();
-        let play_image = self.toolbar.play_image.clone();
-        let cover = self.cover.clone();
-        let state = self.state.clone();
-        self.toolbar.play_button.connect_clicked(move |_| {
-            if state.lock().unwrap().stopped {
-                if playlist.play() {
-                    set_image_icon(&play_image, PAUSE_ICON);
-                    set_cover(&cover, &playlist);
-                }
-            } else {
-                set_image_icon(&play_image, PLAY_ICON);
-            }
-        });
-
-        //
-    }
 }
 
 fn main() {

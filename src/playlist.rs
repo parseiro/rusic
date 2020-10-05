@@ -6,9 +6,12 @@ use gtk::{ApplicationWindow, CellLayoutExt, CellRendererPixbuf, CellRendererText
 use id3::Tag;
 
 use crate::player::Player;
-use crate::State;
+use crate::{State, to_millis};
 
 use self::Visibility::*;
+use std::cell::RefCell;
+use std::cmp::max;
+use std::thread;
 
 const THUMBNAIL_COLUMN: u32 = 0;
 const TITLE_COLUMN: u32 = 1;
@@ -26,8 +29,10 @@ const THUMBNAIL_SIZE: i32 = 64;
 const INTERP_HYPER: InterpType = 3;
 
 pub struct Playlist {
+    current_song: RefCell<Option<String>>,
     model: ListStore,
     player: Player,
+    state: Arc<Mutex<State>>,
     treeview: TreeView,
 }
 
@@ -57,8 +62,10 @@ impl Playlist {
         Self::create_columns(&treeview);
 
         Playlist {
+            current_song: RefCell::new(None),
             model,
             player: Player::new(state.clone()),
+            state,
             treeview,
         }
     }
@@ -121,6 +128,8 @@ impl Playlist {
     }
 
     pub fn add(&self, path: &Path) {
+        self.compute_duration(path);
+
         let filename = path.file_stem()
             .unwrap_or_default()
             .to_str()
@@ -164,6 +173,8 @@ impl Playlist {
         self.model.set_value(&row, PATH_COLUMN, &path.to_value());
     }
 
+
+
     pub fn remove_selection(&self) {
         let selection = self.treeview.get_selection();
         if let Some((_, iter)) = selection.get_selected() {
@@ -191,11 +202,82 @@ impl Playlist {
 
     pub fn play(&self) -> bool {
         if let Some(path) = self.selected_path() {
-            self.player.load(&path);
+            if self.player.is_paused() && Some(&path) == self.path().as_ref() {
+                self.player.resume();
+            } else {
+                self.player.load(&path);
+                *self.current_song.borrow_mut() = Some(path.into());
+            }
             true
         } else {
             false
         }
+    }
+
+    pub fn pause(&self) {
+        self.player.pause();
+    }
+
+    pub fn path(&self) -> Option<String> {
+        self.current_song.borrow().clone()
+    }
+
+    pub fn stop(&self) {
+        *self.current_song.borrow_mut()= None;
+        self.player.stop();
+    }
+
+    pub fn next(&self) -> bool {
+        let selection = self.treeview.get_selection();
+        let next_iter =
+            if let Some((_, iter)) = selection.get_selected() {
+                if !self.model.iter_next(&iter) {
+                    return false;
+                }
+                Some(iter)
+            }
+            else {
+                self.model.get_iter_first()
+            };
+        if let Some(ref iter) = next_iter {
+            selection.select_iter(iter);
+            self.play();
+        }
+        next_iter.is_some()
+    }
+
+    pub fn previous(&self) -> bool {
+        let selection = self.treeview.get_selection();
+        let previous_iter =
+            if let Some((_, iter)) = selection.get_selected() {
+                if !self.model.iter_previous(&iter) {
+                    return false;
+                }
+                Some(iter)
+            }
+            else {
+                self.model.iter_nth_child(None, max(0,
+                                                    self.model.iter_n_children(None)
+                                                        - 1))
+            };
+        if let Some(ref iter) = previous_iter {
+            selection.select_iter(iter);
+            self.play();
+        }
+        previous_iter.is_some()
+    }
+
+    fn compute_duration(&self, path: &Path) {
+        let state = self.state.clone();
+        let path = path.to_string_lossy()
+            .to_string();
+        thread::spawn(move || {
+            if let Some(duration) = Player::compute_duration(&path)
+            {
+                let mut state = state.lock().unwrap();
+                state.durations.insert(path, to_millis(duration));
+            }
+        });
     }
 }
 
